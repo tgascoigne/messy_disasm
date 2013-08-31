@@ -167,6 +167,7 @@ static int elf_read_header(elf_t* elf)
 	elf_assert(elf->header->e_ident[EI_MAG1] == ELFMAG1, ELF_INVALID);
 	elf_assert(elf->header->e_ident[EI_MAG2] == ELFMAG2, ELF_INVALID);
 	elf_assert(elf->header->e_ident[EI_MAG3] == ELFMAG3, ELF_INVALID);
+	elf_assert(elf->header->e_ident[EI_CLASS] == ELFCLASS32, ELF_INVALID_EXECUTABLE);
 	elf_assert(elf->header->e_type == ET_EXEC, ELF_INVALID_EXECUTABLE);
 	return 0;
 }
