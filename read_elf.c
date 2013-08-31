@@ -72,7 +72,6 @@ void elf_free(elf_t* elf)
  */
 void elf_print_sections(elf_t* elf)
 {
-	/* print out the section names */
 	int ret = 0;
 	char sh_name[32];
 	for (int i = 1; i < elf->header->e_shnum; i++) {
@@ -90,13 +89,35 @@ void elf_print_sections(elf_t* elf)
  */
 void elf_print_symbols(elf_t* elf)
 {
-	/* print out the symbol table */
 	int ret = 0;
 	char sym_name[32];
+	char sym_type[32];
 	for (int i = 1; i < elf->symtab_length; i++) {
 		ret = elf_get_symbol_name(elf, i, sym_name);
+		/* fill in a blank name */
+		if (strcmp(sym_name, "") == 0) {
+			sprintf(sym_name, "no name");
+		}
+		/* convert the type to a string */
+		switch (ELF64_ST_TYPE(elf->symtab[i].st_info)) {
+		case STT_NOTYPE:
+			sprintf(sym_type, "no type");
+			break;
+		case STT_OBJECT:
+			sprintf(sym_type, "object");
+			break;
+		case STT_FUNC:
+			sprintf(sym_type, "function");
+			break;
+		case STT_SECTION:
+			sprintf(sym_type, "section");
+			break;
+		case STT_FILE:
+			sprintf(sym_type, "file");
+			break;
+		}
 		if (ret == 0) {
-			printf("symbol %d: %s\n", i, sym_name);
+			printf("symbol %3d: %-10s %-10s\n", i, sym_type, sym_name);
 		} else {
 			printf("symbol %d: error\n", i);
 		}
