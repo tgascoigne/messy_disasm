@@ -17,6 +17,7 @@ struct elf {
 	size_t elf_length;
 	Elf64_Ehdr* header;
 	Elf64_Shdr* shdr;
+	Elf64_Phdr* phdr;
 	int symtab_length;
 	Elf64_Sym* symtab;
 	/* section indexes */
@@ -28,5 +29,6 @@ int elf_read(const char* elf_file, elf_t* elf);
 void elf_free(elf_t* elf);
 void elf_print_sections(elf_t* elf);
 void elf_print_symbols(elf_t* elf);
+void elf_print_segments(elf_t* elf);
 
 #endif /* _READ_ELF_H_ */

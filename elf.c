@@ -16,6 +16,7 @@ int main(int argc, char** argv) {
 
 	elf_print_sections(&elf);
 	elf_print_symbols(&elf);
+	elf_print_segments(&elf);
 
 	elf_free(&elf);
 	

@@ -20,6 +20,7 @@
 
 static int elf_read_header(elf_t* elf);
 static int elf_read_shdr(elf_t* elf);
+static int elf_read_phdr(elf_t* elf);
 static int elf_read_symtab(elf_t* elf);
 static int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out);
 static int elf_get_section_by_name(elf_t* elf, char* name, int* out);
@@ -49,12 +50,10 @@ int elf_read(const char* elf_file, elf_t* elf) {
 	fclose(elf_fd);
 
 	/* parse it */
-	ret = elf_read_header(elf);
-	elf_assert(ret == 0, ret);
-	ret = elf_read_shdr(elf);
-	elf_assert(ret == 0, ret);
-	ret = elf_read_symtab(elf);
-	elf_assert(ret == 0, ret);	
+	ret = elf_read_header(elf);	elf_assert(ret == 0, ret);
+	ret = elf_read_shdr(elf);	elf_assert(ret == 0, ret);
+	ret = elf_read_symtab(elf);	elf_assert(ret == 0, ret);	
+	ret = elf_read_phdr(elf);	elf_assert(ret == 0, ret);
 
 	return EXIT_SUCCESS;
 }
@@ -77,10 +76,21 @@ void elf_print_sections(elf_t* elf)
 	for (int i = 1; i < elf->header->e_shnum; i++) {
 		ret = elf_get_section_name(elf, i, sh_name);
 		if (ret == 0) {
-			printf("section %d: %s\n", i, sh_name);
+			printf("section %d: %s %x\n", i, sh_name, elf->shdr[i].sh_offset);
 		} else {
 			printf("section %d: error\n", i);
 		}
+	}
+}
+
+/**
+ * Prints each segment and their virtual memory mapping
+ */
+void elf_print_segments(elf_t* elf)
+{
+	for (int i = 0; i < elf->header->e_phnum; i++) {
+		uint64_t end_addr = elf->phdr[i].p_vaddr + elf->phdr[i].p_memsz;
+		printf("segment %2d: 0x%x-0x%x\n", i, elf->phdr[i].p_vaddr, end_addr);
 	}
 }
 
@@ -149,6 +159,15 @@ static int elf_read_shdr(elf_t* elf)
 	int ret = 0;
 	ret = elf_get_section_by_name(elf, ".strtab", &elf->sec_strtab);
 	elf_assert(ret == 0, ret);
+	return 0;
+}
+
+/**
+ * Reads the elf program headers
+ */
+static int elf_read_phdr(elf_t* elf)
+{
+	elf->phdr = (Elf64_Phdr*)(elf->elf_data + elf->header->e_phoff);
 	return 0;
 }
 
