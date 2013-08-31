@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <stdint.h>
 
 #define elf_assert(condition, error_ret)					\
 	if (!(condition)) {										\
@@ -22,11 +21,6 @@ static int elf_read_header(elf_t* elf);
 static int elf_read_shdr(elf_t* elf);
 static int elf_read_phdr(elf_t* elf);
 static int elf_read_symtab(elf_t* elf);
-static int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out);
-static int elf_get_section_by_name(elf_t* elf, char* name, int* out);
-static int elf_get_section_name(elf_t* elf, int section, char* out);
-static int elf_get_section_data(elf_t* elf, int section, char** out);
-static int elf_get_symbol_name(elf_t* elf, int symbol, char* out);
 
 /**
  * Reads an elf executable
@@ -73,7 +67,7 @@ void elf_print_sections(elf_t* elf)
 {
 	int ret = 0;
 	char sh_name[32];
-	for (int i = 1; i < elf->header->e_shnum; i++) {
+	for (int i = 1; i < elf->num_sections; i++) {
 		ret = elf_get_section_name(elf, i, sh_name);
 		if (ret == 0) {
 			printf("section %d: %s %x\n", i, sh_name, elf->shdr[i].sh_offset);
@@ -88,28 +82,31 @@ void elf_print_sections(elf_t* elf)
  */
 void elf_print_segments(elf_t* elf)
 {
-	for (int i = 0; i < elf->header->e_phnum; i++) {
+	for (int i = 0; i < elf->num_segments; i++) {
 		uint64_t end_addr = elf->phdr[i].p_vaddr + elf->phdr[i].p_memsz;
 		printf("segment %2d: 0x%x-0x%x\n", i, elf->phdr[i].p_vaddr, end_addr);
 	}
 }
 
 /**
- * Prints the name of each symbol
+ * Prints the name, type, vaddr, and file addr of each symbol
  */
 void elf_print_symbols(elf_t* elf)
 {
 	int ret = 0;
 	char sym_name[32];
 	char sym_type[32];
-	for (int i = 1; i < elf->symtab_length; i++) {
-		ret = elf_get_symbol_name(elf, i, sym_name);
+	for (int i = 1; i < elf->num_symbols; i++) {
+		ret = elf_get_symbol_name(elf, i, sym_name); elf_assert(ret == 0, ret);
+		Elf64_Sym* symbol = &elf->symtab[i];
+
 		/* fill in a blank name */
 		if (strcmp(sym_name, "") == 0) {
 			sprintf(sym_name, "no name");
 		}
+
 		/* convert the type to a string */
-		switch (ELF64_ST_TYPE(elf->symtab[i].st_info)) {
+		switch (ELF64_ST_TYPE(symbol->st_info)) {
 		case STT_NOTYPE:
 			sprintf(sym_type, "no type");
 			break;
@@ -126,12 +123,38 @@ void elf_print_symbols(elf_t* elf)
 			sprintf(sym_type, "file");
 			break;
 		}
+
+		/* find it's virtual and file addr */
+		Elf64_Addr vaddr = symbol->st_value;
+		uint64_t faddr = 0;
+		elf_map_vaddr(elf, vaddr, &faddr); /* ignore mapping errors - dynamic linking etc. */
+		
 		if (ret == 0) {
-			printf("symbol %3d: %-10s %-10s\n", i, sym_type, sym_name);
+			printf("symbol %3d: %-10s %-10s vaddr: %x faddr: %x\n", i, sym_type, sym_name, vaddr, faddr);
 		} else {
 			printf("symbol %d: error\n", i);
 		}
 	}
+}
+
+/**
+ * Maps a virtual address to an offset in the elf file
+ */
+int elf_map_vaddr(elf_t* elf, Elf64_Addr vaddr, uint64_t* faddr)
+{
+	/* try to find the segment which contains the virtual address */
+	for (int i = 1; i < elf->num_segments; i++) {
+		Elf64_Phdr* segment = &elf->phdr[i];
+		Elf64_Addr base_addr = segment->p_vaddr;
+		Elf64_Addr lim_addr = segment->p_vaddr + elf->phdr[i].p_memsz;
+		if (vaddr > base_addr && vaddr < lim_addr) {
+			/* Success! */
+			Elf64_Addr offset_addr = vaddr - base_addr;
+			*faddr = segment->p_offset + offset_addr;
+			return 0;
+		}
+	}
+	return ELF_UNMAPPED;
 }
 
 /**
@@ -154,6 +177,7 @@ static int elf_read_header(elf_t* elf)
 static int elf_read_shdr(elf_t* elf)
 {
 	elf->shdr = (Elf64_Shdr*)(elf->elf_data + elf->header->e_shoff);
+	elf->num_sections = elf->header->e_shnum;
 	/* locate the common section indices */
 	elf->sec_shstrtab = elf->header->e_shstrndx;
 	int ret = 0;
@@ -168,6 +192,7 @@ static int elf_read_shdr(elf_t* elf)
 static int elf_read_phdr(elf_t* elf)
 {
 	elf->phdr = (Elf64_Phdr*)(elf->elf_data + elf->header->e_phoff);
+	elf->num_segments = elf->header->e_phnum;
 	return 0;
 }
 
@@ -181,18 +206,18 @@ static int elf_read_symtab(elf_t* elf)
 	ret = elf_get_section_by_name(elf, ".symtab", &symtab_sec);
 	elf_assert(ret == 0, ret);
 	elf->symtab = (Elf64_Sym*)(elf->elf_data + elf->shdr[symtab_sec].sh_offset);
-	elf->symtab_length = elf->shdr[symtab_sec].sh_size/sizeof(Elf64_Sym);
+	elf->num_symbols = elf->shdr[symtab_sec].sh_size/sizeof(Elf64_Sym);
 	return 0;
 }
 
 /**
  * Locates a section's index by name
  */
-static int elf_get_section_by_name(elf_t* elf, char* name, int* out)
+int elf_get_section_by_name(elf_t* elf, char* name, int* out)
 {
 	char sec_name[32];
 	int ret = 0;
-	for (int i = 1; i < elf->header->e_shnum; i++) {
+	for (int i = 1; i < elf->num_sections; i++) {
 		ret = elf_get_section_name(elf, i, sec_name);
 		elf_assert(ret == 0, ret);
 		if (strcmp(sec_name, name) == 0) {
@@ -205,9 +230,9 @@ static int elf_get_section_by_name(elf_t* elf, char* name, int* out)
 /**
  * Looks up a section's name in shstrtab by it's index
  */
-static int elf_get_section_name(elf_t* elf, int section, char* out)
+int elf_get_section_name(elf_t* elf, int section, char* out)
 {
-	elf_assert(section < elf->header->e_shnum, ELF_INVALID_SECTION);
+	elf_assert(section < elf->num_sections, ELF_INVALID_SECTION);
 	int strtab_ofs = elf->shdr[section].sh_name;
 	int ret = elf_get_strtab_entry(elf, elf->sec_shstrtab, strtab_ofs, out);
 	elf_assert(ret == 0, ret);
@@ -215,11 +240,38 @@ static int elf_get_section_name(elf_t* elf, int section, char* out)
 }
 
 /**
+ * Looks up the file address of a symbol
+ */
+int elf_get_symbol_faddr(elf_t* elf, int symidx, uint64_t* out)
+{
+	Elf64_Sym* symbol = &elf->symtab[symidx];
+	Elf64_Addr vaddr = symbol->st_value;
+	int ret = elf_map_vaddr(elf, vaddr, out); elf_assert(ret == 0, ELF_UNMAPPED);
+	return 0;
+}
+
+/**
+ * Looks up a symbol's index by name
+ */
+int elf_get_symbol_by_name(elf_t* elf, char* name, int* out)
+{
+	char sym_name[32];
+	int ret = 0;
+	for (int i = 0; i < elf->num_symbols; i++) {
+		elf_get_symbol_name(elf, i, sym_name); /* ignore errors */
+		if (strcmp(sym_name, name) == 0) {
+			*out = i;
+		}
+	}
+	return 0;
+}
+
+/**
  * Looks up a symbol's name in strtab by it's index
  */
-static int elf_get_symbol_name(elf_t* elf, int symbol, char* out)
+int elf_get_symbol_name(elf_t* elf, int symbol, char* out)
 {
-	elf_assert(symbol < elf->symtab_length, ELF_INVALID_SYMBOL);
+	elf_assert(symbol < elf->num_symbols, ELF_INVALID_SYMBOL);
 	int strtab_ofs = elf->symtab[symbol].st_name;
 	int ret = elf_get_strtab_entry(elf, elf->sec_strtab, strtab_ofs, out);
 	elf_assert(ret == 0, ret);
@@ -231,7 +283,7 @@ static int elf_get_symbol_name(elf_t* elf, int symbol, char* out)
  *  - strtab: The section index of the strtab to read
  *  - ofs: The offset to read into the strtab
  */
-static int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out)
+int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out)
 {
 	char* shstrtab;
 	int ret = elf_get_section_data(elf, strtab, &shstrtab);
@@ -244,9 +296,9 @@ static int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out)
 /**
  * Gets the contents of a section by its index
  */
-static int elf_get_section_data(elf_t* elf, int section, char** out)
+int elf_get_section_data(elf_t* elf, int section, char** out)
 {
-	elf_assert(section < elf->header->e_shnum, ELF_INVALID_SECTION);
+	elf_assert(section < elf->num_sections, ELF_INVALID_SECTION);
 	uint64_t file_ofs = elf->shdr[section].sh_offset;
 	*out = elf->elf_data+file_ofs;
 	return 0;

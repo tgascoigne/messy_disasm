@@ -16,7 +16,14 @@ int main(int argc, char** argv) {
 
 	elf_print_sections(&elf);
 	elf_print_symbols(&elf);
-	elf_print_segments(&elf);
+
+	int symbol;
+	uint64_t faddr;
+	uint32_t* val;
+	ret = elf_get_symbol_by_name(&elf, "SOME_GLOBAL", &symbol);
+	ret = elf_get_symbol_faddr(&elf, symbol, &faddr);
+	val = (uint32_t*)(elf.elf_data + faddr);
+	printf("Value of SOME_GLOBAL: 0x%x\n", *val);
 
 	elf_free(&elf);
 	
