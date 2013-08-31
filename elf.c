@@ -21,7 +21,15 @@ int main(int argc, char** argv) {
 	uint64_t faddr;
 	uint32_t* val;
 	ret = elf_get_symbol_by_name(&elf, "SOME_GLOBAL", &symbol);
+	if (ret != 0) {
+		fprintf(stderr, "no such symbol 'SOME_GLOBAL'\n");
+		return EXIT_FAILURE;
+	}
 	ret = elf_get_symbol_faddr(&elf, symbol, &faddr);
+	if (ret != 0) {
+		fprintf(stderr, "unable to map symbol: %d\n", ret);
+		return EXIT_FAILURE;
+	}
 	val = (uint32_t*)(elf.elf_data + faddr);
 	printf("Value of SOME_GLOBAL: 0x%x\n", *val);
 
@@ -29,3 +37,7 @@ int main(int argc, char** argv) {
 	
 	return EXIT_SUCCESS;
 }
+
+
+
+
