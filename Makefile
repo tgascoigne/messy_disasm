@@ -6,7 +6,7 @@ elf: elf.c read_elf.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 hello: hello.c
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -m32 -o $@ $^
 
 clean:
 	-rm -f elf hello *.o

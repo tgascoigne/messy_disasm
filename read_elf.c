@@ -98,7 +98,7 @@ void elf_print_symbols(elf_t* elf)
 	char sym_type[32];
 	for (int i = 1; i < elf->num_symbols; i++) {
 		ret = elf_get_symbol_name(elf, i, sym_name); elf_assert(ret == 0, ret);
-		Elf64_Sym* symbol = &elf->symtab[i];
+		Elf32_Sym* symbol = &elf->symtab[i];
 
 		/* fill in a blank name */
 		if (strcmp(sym_name, "") == 0) {
@@ -125,7 +125,7 @@ void elf_print_symbols(elf_t* elf)
 		}
 
 		/* find it's virtual and file addr */
-		Elf64_Addr vaddr = symbol->st_value;
+		Elf32_Addr vaddr = symbol->st_value;
 		uint64_t faddr = 0;
 		elf_map_vaddr(elf, vaddr, &faddr); /* ignore mapping errors - dynamic linking etc. */
 		
@@ -140,16 +140,16 @@ void elf_print_symbols(elf_t* elf)
 /**
  * Maps a virtual address to an offset in the elf file
  */
-int elf_map_vaddr(elf_t* elf, Elf64_Addr vaddr, uint64_t* faddr)
+int elf_map_vaddr(elf_t* elf, Elf32_Addr vaddr, uint64_t* faddr)
 {
 	/* try to find the segment which contains the virtual address */
 	for (int i = 1; i < elf->num_segments; i++) {
-		Elf64_Phdr* segment = &elf->phdr[i];
-		Elf64_Addr base_addr = segment->p_vaddr;
-		Elf64_Addr lim_addr = segment->p_vaddr + elf->phdr[i].p_memsz;
+		Elf32_Phdr* segment = &elf->phdr[i];
+		Elf32_Addr base_addr = segment->p_vaddr;
+		Elf32_Addr lim_addr = segment->p_vaddr + elf->phdr[i].p_memsz;
 		if (vaddr > base_addr && vaddr < lim_addr) {
 			/* Success! */
-			Elf64_Addr offset_addr = vaddr - base_addr;
+			Elf32_Addr offset_addr = vaddr - base_addr;
 			*faddr = segment->p_offset + offset_addr;
 			return 0;
 		}
@@ -162,7 +162,7 @@ int elf_map_vaddr(elf_t* elf, Elf64_Addr vaddr, uint64_t* faddr)
  */
 static int elf_read_header(elf_t* elf)
 {
-	elf->header = (Elf64_Ehdr*)elf->elf_data;
+	elf->header = (Elf32_Ehdr*)elf->elf_data;
 	elf_assert(elf->header->e_ident[EI_MAG0] == ELFMAG0, ELF_INVALID);
 	elf_assert(elf->header->e_ident[EI_MAG1] == ELFMAG1, ELF_INVALID);
 	elf_assert(elf->header->e_ident[EI_MAG2] == ELFMAG2, ELF_INVALID);
@@ -176,7 +176,7 @@ static int elf_read_header(elf_t* elf)
  */
 static int elf_read_shdr(elf_t* elf)
 {
-	elf->shdr = (Elf64_Shdr*)(elf->elf_data + elf->header->e_shoff);
+	elf->shdr = (Elf32_Shdr*)(elf->elf_data + elf->header->e_shoff);
 	elf->num_sections = elf->header->e_shnum;
 	/* locate the common section indices */
 	elf->sec_shstrtab = elf->header->e_shstrndx;
@@ -191,7 +191,7 @@ static int elf_read_shdr(elf_t* elf)
  */
 static int elf_read_phdr(elf_t* elf)
 {
-	elf->phdr = (Elf64_Phdr*)(elf->elf_data + elf->header->e_phoff);
+	elf->phdr = (Elf32_Phdr*)(elf->elf_data + elf->header->e_phoff);
 	elf->num_segments = elf->header->e_phnum;
 	return 0;
 }
@@ -205,8 +205,8 @@ static int elf_read_symtab(elf_t* elf)
 	int ret = 0;
 	ret = elf_get_section_by_name(elf, ".symtab", &symtab_sec);
 	elf_assert(ret == 0, ret);
-	elf->symtab = (Elf64_Sym*)(elf->elf_data + elf->shdr[symtab_sec].sh_offset);
-	elf->num_symbols = elf->shdr[symtab_sec].sh_size/sizeof(Elf64_Sym);
+	elf->symtab = (Elf32_Sym*)(elf->elf_data + elf->shdr[symtab_sec].sh_offset);
+	elf->num_symbols = elf->shdr[symtab_sec].sh_size/sizeof(Elf32_Sym);
 	return 0;
 }
 
@@ -244,8 +244,8 @@ int elf_get_section_name(elf_t* elf, int section, char* out)
  */
 int elf_get_symbol_faddr(elf_t* elf, int symidx, uint64_t* out)
 {
-	Elf64_Sym* symbol = &elf->symtab[symidx];
-	Elf64_Addr vaddr = symbol->st_value;
+	Elf32_Sym* symbol = &elf->symtab[symidx];
+	Elf32_Addr vaddr = symbol->st_value;
 	int ret = elf_map_vaddr(elf, vaddr, out); elf_assert(ret == 0, ELF_UNMAPPED);
 	return 0;
 }

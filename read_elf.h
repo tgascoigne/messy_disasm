@@ -17,10 +17,10 @@ typedef struct elf elf_t;
 struct elf {
 	char* elf_data;
 	size_t elf_length;
-	Elf64_Ehdr* header;
-	Elf64_Shdr* shdr;
-	Elf64_Phdr* phdr;
-	Elf64_Sym* symtab;
+	Elf32_Ehdr* header;
+	Elf32_Shdr* shdr;
+	Elf32_Phdr* phdr;
+	Elf32_Sym* symtab;
 	int num_segments;
 	int num_sections;
 	int num_symbols;
@@ -46,7 +46,7 @@ int elf_get_symbol_faddr(elf_t* elf, int symbol, uint64_t* out);
 int elf_get_symbol_by_name(elf_t* elf, char* name, int* out);
 int elf_get_symbol_name(elf_t* elf, int symbol, char* out);
 
-int elf_map_vaddr(elf_t* elf, Elf64_Addr vaddr, uint64_t* faddr);
+int elf_map_vaddr(elf_t* elf, Elf32_Addr vaddr, uint64_t* faddr);
 
 
 #endif /* _READ_ELF_H_ */
