@@ -11,10 +11,11 @@
 #include <string.h>
 #include <stdint.h>
 
-#define elf_assert(condition, error_ret)						\
-	if (!(condition)) {											\
-		fprintf(stderr, "assert failed: %s\n", #condition);		\
-		return error_ret;										\
+#define elf_assert(condition, error_ret)					\
+	if (!(condition)) {										\
+		fprintf(stderr, "assert failed: %s\n", #condition);	\
+		__asm__("int3");									\
+		return error_ret;									\
 	}
 
 static int elf_read_header(elf_t* elf);
