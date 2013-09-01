@@ -41,12 +41,15 @@ int elf_get_strtab_entry(elf_t* elf, int strtab, int ofs, char* out);
 int elf_get_section_by_name(elf_t* elf, char* name, int* out);
 int elf_get_section_name(elf_t* elf, int section, char* out);
 int elf_get_section_data(elf_t* elf, int section, char** out);
+int elf_get_section_faddr(elf_t* elf, int section, uint64_t* faddr);
+int elf_get_section_len(elf_t* elf, int section, uint64_t* len);
 
 int elf_get_symbol_faddr(elf_t* elf, int symbol, uint64_t* out);
+int elf_get_symbol_section(elf_t* elf, int symidx, int* section);
 int elf_get_symbol_by_name(elf_t* elf, char* name, int* out);
 int elf_get_symbol_name(elf_t* elf, int symbol, char* out);
 
 int elf_map_vaddr(elf_t* elf, Elf32_Addr vaddr, uint64_t* faddr);
-
+int elf_map_vaddr_section(elf_t* elf, Elf32_Addr vaddr, int* section);
 
 #endif /* _READ_ELF_H_ */

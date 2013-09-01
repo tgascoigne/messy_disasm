@@ -158,6 +158,25 @@ int elf_map_vaddr(elf_t* elf, Elf32_Addr vaddr, uint64_t* faddr)
 }
 
 /**
+ * Maps a virtual address to a section
+ */
+int elf_map_vaddr_section(elf_t* elf, Elf32_Addr vaddr, int* out)
+{
+	/* try to find the section which contains the virtual address */
+	for (int i = 1; i < elf->num_sections; i++) {
+		Elf32_Shdr* section = &elf->shdr[i];
+		Elf32_Addr base_addr = section->sh_addr;
+		Elf32_Addr lim_addr = section->sh_addr + section->sh_size;
+		if (vaddr > base_addr && vaddr < lim_addr) {
+			/* Success! */
+			*out = i;
+			return 0;
+		}
+	}
+	return ELF_UNMAPPED;
+}
+
+/**
  * Reads the elf header
  */
 static int elf_read_header(elf_t* elf)
@@ -252,6 +271,17 @@ int elf_get_symbol_faddr(elf_t* elf, int symidx, uint64_t* out)
 }
 
 /**
+ * Looks up the section of a symbol
+ */
+int elf_get_symbol_section(elf_t* elf, int symidx, int* section)
+{
+	Elf32_Sym* symbol = &elf->symtab[symidx];
+	Elf32_Addr vaddr = symbol->st_value;
+	int ret = elf_map_vaddr_section(elf, vaddr, section); elf_assert(ret == 0, ELF_UNMAPPED);
+	return 0;
+}
+
+/**
  * Looks up a symbol's index by name
  */
 int elf_get_symbol_by_name(elf_t* elf, char* name, int* out)
@@ -303,4 +333,24 @@ int elf_get_section_data(elf_t* elf, int section, char** out)
 	uint64_t file_ofs = elf->shdr[section].sh_offset;
 	*out = elf->elf_data+file_ofs;
 	return 0;
+}
+
+/**
+ * Gets the faddr of a section by its index
+ */
+int elf_get_section_faddr(elf_t* elf, int section, uint64_t* faddr)
+{
+	elf_assert(section < elf->num_sections, ELF_INVALID_SECTION);
+	*faddr = elf->shdr[section].sh_offset;
+	return 0;
+}
+
+/**
+ * Gets the length of a section by its index
+ */
+int elf_get_section_len(elf_t* elf, int section, uint64_t* len)
+{
+	elf_assert(section < elf->num_sections, ELF_INVALID_SECTION);
+	*len = elf->shdr[section].sh_size;
+	return 0;	
 }
