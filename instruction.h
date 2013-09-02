@@ -12,6 +12,7 @@
 #define OP_CALL 6
 #define OP_LEAVE 7
 #define OP_RET 8
+#define OP_ADD 9
 #define OP_MAX 0xFF
 
 static char mnemonics[OP_MAX][16] = {
@@ -22,7 +23,8 @@ static char mnemonics[OP_MAX][16] = {
 	[OP_MOVL] = "movl",
 	[OP_CALL] = "call",
 	[OP_LEAVE] = "leave",
-	[OP_RET] = "ret"
+	[OP_RET] = "ret",
+	[OP_ADD] = "add"
 };
 
 #define OPER_NONE 0
@@ -99,9 +101,11 @@ static char reg_table[3][8][16] = {
 
 static istr_def_t istr_table[] = {
 	{ .opcode = 0x50, .operation = OP_PUSH, .flags = 0, .src_oper = OPER_REG, .dst_oper = OPER_NONE },
-	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
+	{ .opcode = 0x81, .ex_opcode = 0x0, .operation = OP_ADD, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x4, .operation = OP_AND, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x5, .operation = OP_SUB, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
+	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
+	{ .opcode = 0x8B, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
 	{ .opcode = 0xB8, .operation = OP_MOV, .flags = 0, .src_oper = OPER_IMM, .dst_oper = OPER_REG },
 	{ .opcode = 0xC3, .operation = OP_RET, .flags = 0, .src_oper = OPER_NONE, .dst_oper = OPER_NONE },
 	{ .opcode = 0xC7, .ex_opcode = 0x0, .operation = OP_MOVL, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },

@@ -10,6 +10,8 @@
 #define OPERAND_DST 1
 
 #define MODE_REG_INDIRECT 0
+#define MODE_DISP8 1
+#define MODE_DISP32 2
 #define MODE_REG 3
 
 #define OPCODE_BASE(i) (i & 0xF8)
@@ -162,11 +164,25 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 {
 	uint8_t modrm;
 	uint8_t sib;
+	int8_t disp8;
+	int32_t disp32;
 
 	if (istr->definition->flags & FLAG_MODRM) {
 		modrm = *(addr++);
+
+		/* decode sib byte if necessary */
 		if (MODRM_MODE(modrm) != MODE_REG && MODRM_RM(modrm) == 4) {
 			sib = *(addr++);
+		}
+
+		/* decode displacement if necessary */
+		if (MODRM_MODE(modrm) == MODE_DISP8) {
+			disp8 = *((uint8_t*)addr);
+			addr += 1;
+		}
+		if (MODRM_MODE(modrm) == MODE_DISP32 || (MODRM_MODE(modrm) == MODE_REG_INDIRECT && MODRM_RM(modrm) == 5)) {
+			disp32 = *((uint32_t*)addr);
+			addr += 4;
 		}
 	}
 
@@ -197,7 +213,22 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 				operand->op.addr.idx = -1;
 			}
 			operand->op.addr.base = SIB_BASE(sib);
-			operand->op.addr.disp = 0; /* todo: decode displacement */
+			switch (MODRM_MODE(modrm)) {
+			case MODE_REG_INDIRECT:
+				if (MODRM_RM(modrm) == 5) {
+					operand->op.addr.disp = disp32;
+				}
+				break;
+			case MODE_DISP8:
+				operand->op.addr.disp = disp8;
+				break;
+			case MODE_DISP32:
+				operand->op.addr.disp = disp32;
+				break;
+			default:
+				operand->op.addr.disp = 0;
+				break;
+			}
 			switch (SIB_SS(sib)) {
 			case 0: operand->op.addr.scale = 0; break;
 			case 1: operand->op.addr.scale = 2; break;
@@ -214,6 +245,20 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 			operand->op.addr.base = MODRM_RM(modrm);
 			operand->op.addr.scale = 0;
 			operand->op.addr.disp = 0;
+			goto exit;
+		case MODE_DISP8:
+			operand->type = OPER_ADDR;
+			operand->op.addr.idx = -1;
+			operand->op.addr.base = MODRM_RM(modrm);
+			operand->op.addr.scale = 0;
+			operand->op.addr.disp = disp8;
+			goto exit;
+		case MODE_DISP32:
+			operand->type = OPER_ADDR;
+			operand->op.addr.idx = -1;
+			operand->op.addr.base = MODRM_RM(modrm);
+			operand->op.addr.scale = 0;
+			operand->op.addr.disp = disp32;
 			goto exit;
 		case MODE_REG:
 			operand->type = OPER_REG;
