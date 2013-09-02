@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 	/* disassemble main */
 	ret = disasm_func(&elf, argv[2]);
 	if (ret != 0) {
-		fprintf(stderr, "unable to disassemble %s: %d\n", argv[2], ret);
+		fprintf(stderr, "unable to disassemble %s\n", argv[2]);
 		goto exit;
 	}
 

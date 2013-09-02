@@ -322,6 +322,14 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 		}
 	}
 
+	if (operand->type == OPER_REL8_ADDR) {
+		int8_t* rel8 = (int8_t*)addr;
+		addr += 1;
+		operand->type = OPER_ABS_ADDR;
+		operand->op.abs_addr = (istr->vaddr + *rel8);
+		goto exit;
+	}
+
 exit:
 	if (addr > *istr_end) {
 		*istr_end = addr;
