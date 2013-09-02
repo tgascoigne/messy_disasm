@@ -9,16 +9,28 @@
 #define OP_AND 3
 #define OP_SUB 4
 #define OP_MOVL 5
+#define OP_CALL 6
 #define OP_MAX 0xFF
+
+static char mnemonics[OP_MAX][16] = {
+	[OP_PUSH] = "push",
+	[OP_MOV] = "mov",
+	[OP_AND] = "and",
+	[OP_SUB] = "sub",
+	[OP_MOVL] = "movl",
+	[OP_CALL] = "call"
+};
 
 #define OPER_NONE 0
 #define OPER_REG 1
 #define OPER_ADDR 2
 #define OPER_IMM 3
-#define OPER_RM 4
-#define OPER_IMM8 5
-#define OPER_IMM16 6
-#define OPER_IMM32 7
+#define OPER_ABS_ADDR 4
+#define OPER_RM 5
+#define OPER_IMM8 6
+#define OPER_IMM16 7
+#define OPER_IMM32 8
+#define OPER_REL_ADDR 9
 
 #define SZ_8 0
 #define SZ_16 1
@@ -29,6 +41,7 @@
 
 typedef int8_t reg_t;
 typedef uint32_t imm_t;
+typedef uint32_t abs_addr_t;
 
 typedef struct istr_def istr_def_t;
 typedef struct istr istr_t;
@@ -59,10 +72,12 @@ struct operand {
 		reg_t reg;
 		addr_op_t addr;
 		imm_t imm;
+		abs_addr_t abs_addr;
 	} op;
 };
 
 struct istr {
+	uint32_t vaddr;
 	istr_def_t* definition;
 	uint16_t opcode;
 	uint8_t operation;
@@ -78,20 +93,13 @@ static char reg_table[3][8][16] = {
 	{ "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" }
 };
 
-static char mnemonics[OP_MAX][16] = {
-	[OP_PUSH] = "push",
-	[OP_MOV] = "mov",
-	[OP_AND] = "and",
-	[OP_SUB] = "sub",
-	[OP_MOVL] = "movl"
-};
-
 static istr_def_t istr_table[] = {
 	{ .opcode = 0x50, .operation = OP_PUSH, .flags = 0, .src_oper = OPER_REG, .dst_oper = OPER_NONE },
 	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
 	{ .opcode = 0x83, .ex_opcode = 0x4, .operation = OP_AND, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x5, .operation = OP_SUB, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0xC7, .ex_opcode = 0x0, .operation = OP_MOVL, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
+	{ .opcode = 0xE8, .operation = OP_CALL, .flags = 0, .src_oper = OPER_REL_ADDR, .dst_oper = OPER_NONE },
 	{ 0 }
 };
 

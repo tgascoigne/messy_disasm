@@ -271,6 +271,16 @@ int elf_get_symbol_faddr(elf_t* elf, int symidx, uint64_t* out)
 }
 
 /**
+ * Looks up the virtual address of a symbol
+ */
+int elf_get_symbol_vaddr(elf_t* elf, int symidx, uint32_t* out)
+{
+	Elf32_Sym* symbol = &elf->symtab[symidx];
+	*out = symbol->st_value;
+	return 0;
+}
+
+/**
  * Looks up the section of a symbol
  */
 int elf_get_symbol_section(elf_t* elf, int symidx, int* section)

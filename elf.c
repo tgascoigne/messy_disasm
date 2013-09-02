@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
 	/* disassemble main */
 	int symbol;
 	uint64_t faddr;
+	uint32_t vaddr;
 	ret = elf_get_symbol_by_name(&elf, "main", &symbol);
 	if (ret != 0) {
 		fprintf(stderr, "no such symbol 'main'\n");
@@ -31,12 +32,21 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
+	ret = elf_get_symbol_vaddr(&elf, symbol, &vaddr);
+	if (ret != 0) {
+		fprintf(stderr, "unable to map symbol: %d\n", ret);
+		return EXIT_FAILURE;
+	}
+
 	unsigned char* ip = (unsigned char*)&elf.elf_data[faddr];
+	uint32_t virt_ip = vaddr;
 	istr_t instruction;
 
 	char istr_str[16];
-	for (int i = 0; i < 5; i++) {
-		ret = istr_decode(&ip, &instruction);
+	for (int i = 0; i < 6; i++) {
+		unsigned char* orig_ip = ip;
+		ret = istr_decode(&ip, virt_ip, &instruction);
+		virt_ip += (ip - orig_ip);
 		if (ret != 0) {
 			printf("unable to decode instruction at %x\n", ip);
 			ret = EXIT_FAILURE;

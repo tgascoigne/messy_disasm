@@ -45,6 +45,7 @@ int elf_get_section_faddr(elf_t* elf, int section, uint64_t* faddr);
 int elf_get_section_len(elf_t* elf, int section, uint64_t* len);
 
 int elf_get_symbol_faddr(elf_t* elf, int symbol, uint64_t* out);
+int elf_get_symbol_vaddr(elf_t* elf, int symbol, uint32_t* out);
 int elf_get_symbol_section(elf_t* elf, int symidx, int* section);
 int elf_get_symbol_by_name(elf_t* elf, char* name, int* out);
 int elf_get_symbol_name(elf_t* elf, int symbol, char* out);

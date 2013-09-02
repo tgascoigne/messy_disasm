@@ -28,7 +28,7 @@ static void istr_decode_prefix(unsigned char** _addr, istr_t* out);
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out);
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction);
 
-int istr_decode(unsigned char** _addr, istr_t* out)
+int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 {
 	int ret = 0;
 	unsigned char* addr = *_addr;
@@ -36,6 +36,7 @@ int istr_decode(unsigned char** _addr, istr_t* out)
 
 	/* init an empty instruction */
 	memset(out, 0, sizeof(operand_t));
+	out->vaddr = ip;
 
 	out->op_size = SZ_32;
 	out->addr_size = SZ_32;
@@ -245,6 +246,23 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 		operand->op.imm = *imm32;
 		addr += 4;
 		goto exit;
+	}
+
+	/* decode relative addresses */
+	if (operand->type == OPER_REL_ADDR) {
+		if (istr->op_size == SZ_16) {
+			int16_t* rel16 = (int16_t*)addr;
+			addr += 2;
+			operand->type = OPER_ABS_ADDR;
+			operand->op.abs_addr = (istr->vaddr + *rel16);
+			goto exit;
+		} else if (istr->op_size == SZ_32) {
+			int32_t* rel32 = (int32_t*)addr;
+			addr += 4;
+			operand->type = OPER_ABS_ADDR;
+			operand->op.abs_addr = (istr->vaddr + *rel32);
+			goto exit;
+		}
 	}
 
 exit:

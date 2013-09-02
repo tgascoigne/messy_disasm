@@ -5,40 +5,44 @@
 
 void op_to_string(istr_t* istr, operand_t* op, char* out)
 {
-	reg_t r_op = op->op.reg;
-	imm_t i_op = op->op.imm;
-	addr_op_t* a_op = &(op->op.addr);
+	reg_t reg_op = op->op.reg;
+	imm_t imm_op = op->op.imm;
+	addr_op_t* addr_op = &(op->op.addr);
+	abs_addr_t abs_addr_op = op->op.imm;
 	char tmp[16];
 	sprintf(out, "");
 	switch (op->type) {
 	case OPER_REG:
-		sprintf(out, "%%%s", reg_table[istr->op_size][r_op]);
+		sprintf(out, "%%%s", reg_table[istr->op_size][reg_op]);
 		break;
 	case OPER_IMM:
-		sprintf(out, "$0x%x", i_op);
+		sprintf(out, "$0x%x", imm_op);
+		break;
+	case OPER_ABS_ADDR:
+		sprintf(out, "%x", abs_addr_op);
 		break;
 	case OPER_ADDR:
 		/* append the displacement */
-		if (a_op->disp != 0) { 
-			sprintf(tmp, "%d", a_op->disp);
+		if (addr_op->disp != 0) { 
+			sprintf(tmp, "%d", addr_op->disp);
 			strcat(out, tmp);
 		}
 
 		strcat(out, "(");
 
 		/* append the base */
-		if (a_op->base != -1) {
-			sprintf(tmp, "%%%s", reg_table[istr->addr_size][a_op->base]);
+		if (addr_op->base != -1) {
+			sprintf(tmp, "%%%s", reg_table[istr->addr_size][addr_op->base]);
 			strcat(out, tmp);
 		}
 
 		/* append the index + scale */
-		if (a_op->idx != -1) {
+		if (addr_op->idx != -1) {
 			strcat(out, ",");
-			sprintf(tmp, "%%%s", reg_table[istr->addr_size][a_op->idx]);
+			sprintf(tmp, "%%%s", reg_table[istr->addr_size][addr_op->idx]);
 			strcat(out, tmp);
 			strcat(out, ",");
-			sprintf(tmp, "%d", a_op->scale);
+			sprintf(tmp, "%d", addr_op->scale);
 			strcat(out, tmp);
 		}
 
@@ -57,7 +61,7 @@ void istr_to_string(istr_t* istr, char* out)
 	op_to_string(istr, &istr->src_oper, src_oper);
 	op_to_string(istr, &istr->dst_oper, dst_oper);
 
-	sprintf(out, "");
+	sprintf(out, "%8x: ", istr->vaddr);
 	strcat(out, mnemonics[istr->operation]);
 	strcat(out, " ");
 	if (strcmp(src_oper, "") != 0) {

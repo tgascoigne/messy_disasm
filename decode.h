@@ -6,6 +6,6 @@
 
 #include "instruction.h"
 
-int istr_decode(unsigned char** addr, istr_t* out);
+int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out);
 
 #endif /* _DECODE_H_ */
