@@ -20,6 +20,6 @@
 *.app
 
 # Targets
-elf
+messy
 hello
 hello.386

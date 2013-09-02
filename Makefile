@@ -1,11 +1,12 @@
 CFLAGS = -std=gnu99 -g
 
+OUT = messy
 HEADERS = read_elf.h decode.h instruction.h disassemble.h
-OBJECTS = elf.c read_elf.c decode.c instruction.c disassemble.c
+OBJECTS = messy.c read_elf.c decode.c instruction.c disassemble.c
 
-all: elf hello hello.386
+all: $(OUT) hello hello.386
 
-elf: $(OBJECTS) $(HEADERS)
+$(OUT): $(OBJECTS) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
 
 hello: hello.c
@@ -15,4 +16,6 @@ hello.386: hello
 	objdump -d $< > $@
 
 clean:
-	-rm -f elf hello *.o
+	-rm -f $(OUT) hello hello.386 *.o
+
+.PHONY: all clean
