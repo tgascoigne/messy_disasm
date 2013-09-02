@@ -12,15 +12,6 @@
 #define MODE_REG_INDIRECT 0
 #define MODE_REG 3
 
-istr_def_t istr_table[] = {
-	{ .opcode = 0x50, .operation = OP_PUSH, .flags = 0, .src_oper = OPER_REG, .dst_oper = OPER_NONE },
-	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
-	{ .opcode = 0x83, .ex_opcode = 0x4, .operation = OP_AND, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
-	{ .opcode = 0x83, .ex_opcode = 0x5, .operation = OP_SUB, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
-	{ .opcode = 0xC7, .ex_opcode = 0x0, .operation = OP_MOVL, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
-	{ 0 }
-};
-
 #define OPCODE_BASE(i) (i & 0xF8)
 #define OPCODE_REG(i) (i & 7)
 
@@ -109,8 +100,8 @@ static void istr_decode_prefix(unsigned char** _addr, istr_t* out)
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 {
 	unsigned char* addr = *_addr;
-
 	uint16_t opcode;
+	uint8_t modrm;
 
 	/* read the opcode */
 	if (*addr == 0x0F) { /* extended 2-byte opcode */
@@ -119,27 +110,24 @@ static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 		opcode = *(addr++);
 	}
 
-	uint8_t modrm = *addr;
+	modrm = *addr;
 
 	/* try to find it's definition */
 	istr_def_t* def = &istr_table[0];
 	while (def->opcode != 0) {
 		bool found = false;
+		/* test plain opcodes and extended opcodes */
 		if (def->opcode == opcode) {
-			if (def->flags & FLAG_EXTD_OPCODE) {
-				uint8_t extd = MODRM_OP(modrm);
-				if (extd == def->ex_opcode) {
-					found = true;
-				}
-			} else {
-				found = true;
+			found = true;
+			if (def->flags & FLAG_EXTD_OPCODE && MODRM_OP(modrm) != def->ex_opcode) {
+				found = false;
 			}
 		}
 
+		/* test split opcodes */
 		if (!(def->flags & FLAG_MODRM) && def->opcode == OPCODE_BASE(opcode)) {
 			found = true;
 		}
-
 
 		if (found) {
 			istr_out->definition = def;
@@ -200,6 +188,7 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 			case 2: operand->op.addr.scale = 4; break;
 			case 3: operand->op.addr.scale = 8; break;
 			}
+			istr->extra_bytes = 1;
 			goto exit;
 		}
 

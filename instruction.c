@@ -3,20 +3,6 @@
 #include <string.h>
 #include <stdio.h>
 
-char reg_table[3][8][16] = {
-	{ "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" },
-	{ "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" },
-	{ "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" }
-};
-
-char mnemonics[OP_MAX][16] = {
-	[OP_PUSH] = "push",
-	[OP_MOV] = "mov",
-	[OP_AND] = "and",
-	[OP_SUB] = "sub",
-	[OP_MOVL] = "movl"
-};
-
 void op_to_string(istr_t* istr, operand_t* op, char* out)
 {
 	reg_t r_op = op->op.reg;
