@@ -148,9 +148,13 @@ static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction)
 {
 	uint8_t modrm;
+	uint8_t sib;
 
 	if (istr->definition->flags & FLAG_MODRM) {
 		modrm = *(addr++);
+		if (MODRM_MODE(modrm) != MODE_REG && MODRM_RM(modrm) == 4) {
+			sib = *(addr++);
+		}
 	}
 
 	/* ignore unnecessary operand */
@@ -174,7 +178,6 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 	if (operand->type == OPER_RM && istr->definition->flags & FLAG_MODRM) {
 		/* decode the SIB byte if necessary */
 		if (MODRM_MODE(modrm) != MODE_REG && MODRM_RM(modrm) == 4) {
-			uint8_t sib = *(addr++);
 			operand->type = OPER_ADDR;
 			operand->op.addr.idx = SIB_IDX(sib);
 			if (operand->op.addr.idx == 4) { /* none */
@@ -188,7 +191,6 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 			case 2: operand->op.addr.scale = 4; break;
 			case 3: operand->op.addr.scale = 8; break;
 			}
-			istr->extra_bytes = 1;
 			goto exit;
 		}
 
