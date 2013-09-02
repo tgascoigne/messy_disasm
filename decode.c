@@ -28,6 +28,9 @@ static void istr_decode_prefix(unsigned char** _addr, istr_t* out);
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out);
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction);
 
+/**
+ * Decode an instruction located at addr with virtual address ip
+ */
 int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 {
 	int ret = 0;
@@ -58,6 +61,9 @@ int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 	return 0;
 }
 
+/**
+ * Decode any of the optional 4 byte prefixes
+ */
 static void istr_decode_prefix(unsigned char** _addr, istr_t* out)
 {
 	unsigned char* addr = *_addr;
@@ -98,6 +104,9 @@ static void istr_decode_prefix(unsigned char** _addr, istr_t* out)
 	*_addr = addr;
 }
 
+/**
+ * Decode an instruction opcode
+ */
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 {
 	unsigned char* addr = *_addr;
@@ -146,6 +155,9 @@ static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 	return ISTR_NO_INSTRUCTION;
 }
 
+/**
+ * Decode an instruction operand
+ */
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction)
 {
 	uint8_t modrm;

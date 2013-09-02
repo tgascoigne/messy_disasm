@@ -3,6 +3,32 @@
 #include <string.h>
 #include <stdio.h>
 
+/**
+ * Produce a string representation of a given instruction
+ */
+void istr_to_string(istr_t* istr, char* out)
+{
+	char src_oper[16];
+	char dst_oper[16];
+	op_to_string(istr, &istr->src_oper, src_oper);
+	op_to_string(istr, &istr->dst_oper, dst_oper);
+
+	sprintf(out, "%8x: ", istr->vaddr);
+	strcat(out, mnemonics[istr->operation]);
+	strcat(out, " ");
+	if (strcmp(src_oper, "") != 0) {
+		strcat(out, src_oper);
+	}
+
+	if (strcmp(dst_oper, "") != 0) {
+		strcat(out, ",");
+		strcat(out, dst_oper);
+	}
+}
+
+/**
+ * Produce a string representation of a given operand
+ */
 void op_to_string(istr_t* istr, operand_t* op, char* out)
 {
 	reg_t reg_op = op->op.reg;
@@ -51,25 +77,5 @@ void op_to_string(istr_t* istr, operand_t* op, char* out)
 	default:
 		sprintf(out, "");
 		break;
-	}
-}
-
-void istr_to_string(istr_t* istr, char* out)
-{
-	char src_oper[16];
-	char dst_oper[16];
-	op_to_string(istr, &istr->src_oper, src_oper);
-	op_to_string(istr, &istr->dst_oper, dst_oper);
-
-	sprintf(out, "%8x: ", istr->vaddr);
-	strcat(out, mnemonics[istr->operation]);
-	strcat(out, " ");
-	if (strcmp(src_oper, "") != 0) {
-		strcat(out, src_oper);
-	}
-
-	if (strcmp(dst_oper, "") != 0) {
-		strcat(out, ",");
-		strcat(out, dst_oper);
 	}
 }
