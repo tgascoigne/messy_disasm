@@ -97,7 +97,7 @@ void elf_print_symbols(elf_t* elf)
 	char sym_name[32];
 	char sym_type[32];
 	for (int i = 1; i < elf->num_symbols; i++) {
-		ret = elf_get_symbol_name(elf, i, sym_name); elf_assert(ret == 0, ret);
+		ret = elf_get_symbol_name(elf, i, sym_name);
 		Elf32_Sym* symbol = &elf->symtab[i];
 
 		/* fill in a blank name */

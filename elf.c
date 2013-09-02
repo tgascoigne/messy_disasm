@@ -1,4 +1,6 @@
 #include "read_elf.h"
+#include "decode.h"
+
 #include <stdio.h>
 
 int main(int argc, char** argv) {
@@ -14,28 +16,41 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	elf_print_sections(&elf);
-	elf_print_symbols(&elf);
-
+	/* disassemble main */
 	int symbol;
 	uint64_t faddr;
-	uint32_t* val;
-	ret = elf_get_symbol_by_name(&elf, "SOME_GLOBAL", &symbol);
+	ret = elf_get_symbol_by_name(&elf, "main", &symbol);
 	if (ret != 0) {
-		fprintf(stderr, "no such symbol 'SOME_GLOBAL'\n");
+		fprintf(stderr, "no such symbol 'main'\n");
 		return EXIT_FAILURE;
 	}
+
 	ret = elf_get_symbol_faddr(&elf, symbol, &faddr);
 	if (ret != 0) {
 		fprintf(stderr, "unable to map symbol: %d\n", ret);
 		return EXIT_FAILURE;
 	}
-	val = (uint32_t*)(elf.elf_data + faddr);
-	printf("Value of SOME_GLOBAL: 0x%x\n", *val);
 
+	unsigned char* ip = (unsigned char*)&elf.elf_data[faddr];
+	istr_t instruction;
+
+	char istr_str[16];
+	for (int i = 0; i < 5; i++) {
+		ret = istr_decode(&ip, &instruction);
+		if (ret != 0) {
+			printf("unable to decode instruction at %x\n", ip);
+			ret = EXIT_FAILURE;
+			goto exit;
+		}
+		istr_to_string(&instruction, istr_str);
+		printf("%s\n", istr_str);
+	}
+
+	ret = EXIT_SUCCESS;
+exit:
 	elf_free(&elf);
 	
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 
