@@ -50,7 +50,8 @@ void op_to_string(istr_t* istr, operand_t* op, char* out)
 	case OPER_ADDR:
 		/* append the displacement */
 		if (addr_op->disp != 0) { 
-			sprintf(tmp, "%d", addr_op->disp);
+			int32_t d = addr_op->disp;
+			sprintf(tmp, "%s0x%x", (d < 0 ? "-" : ""), (d < 0 ? -d : d));
 			strcat(out, tmp);
 		}
 
