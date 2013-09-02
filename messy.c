@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 int main(int argc, char** argv) {
-	if (argc < 2) {
-		fprintf(stderr, "no input elf specified\n");
+	if (argc < 3) {
+		fprintf(stderr, "usage: messy [elf] [function]\n");
 		return EXIT_FAILURE;
 	}
 
@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
 	}
 
 	/* disassemble main */
-	ret = disasm_func(&elf, "main");
+	ret = disasm_func(&elf, argv[2]);
 	if (ret != 0) {
-		fprintf(stderr, "unable to disassemble main: %d\n", ret);
+		fprintf(stderr, "unable to disassemble %s: %d\n", argv[2], ret);
 		goto exit;
 	}
 

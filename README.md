@@ -8,7 +8,7 @@ It is not beautiful, elegant, fast, or even legible, but it was fun to write.
 Currently it can disassemble just enough instructions to be able to handle the main function of a hello world compiled by GCC.
 Sample output:
 ```
-$ ./messy hello
+$ ./messy hello main
 8048400 <main>:
  8048400: push %ebp
  8048401: mov %ebp,%esp
