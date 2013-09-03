@@ -26,6 +26,7 @@
 static void istr_decode_prefix(unsigned char** _addr, istr_t* out);
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out);
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand);
+static void resolve_rel_addr(uint32_t base, operand_t* op);
 
 /**
  * Decode an instruction located at addr with virtual address ip
@@ -54,6 +55,10 @@ int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 
 	istr_decode_operand(addr, &istr_end, out, &out->src_oper);
 	istr_decode_operand(addr, &istr_end, out, &out->dst_oper);
+
+	uint32_t rel_base = ip + (uint64_t)(istr_end - addr) + 1;
+	resolve_rel_addr(rel_base, &out->src_oper);
+	resolve_rel_addr(rel_base, &out->dst_oper);
 
 	*_addr = istr_end;
 
@@ -307,14 +312,12 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 		if (istr->op_size == SZ_16) {
 			int16_t* rel16 = (int16_t*)addr;
 			addr += 2;
-			operand->type = OPER_ABS_ADDR;
-			operand->op.abs_addr = (istr->vaddr + *rel16);
+			operand->op.abs_addr = *rel16;
 			goto exit;
 		} else if (istr->op_size == SZ_32) {
 			int32_t* rel32 = (int32_t*)addr;
 			addr += 4;
-			operand->type = OPER_ABS_ADDR;
-			operand->op.abs_addr = (istr->vaddr + *rel32);
+			operand->op.abs_addr = *rel32;
 			goto exit;
 		}
 	}
@@ -322,8 +325,8 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 	if (operand->type == OPER_REL8_ADDR) {
 		int8_t* rel8 = (int8_t*)addr;
 		addr += 1;
-		operand->type = OPER_ABS_ADDR;
-		operand->op.abs_addr = (istr->vaddr + *rel8);
+		operand->type = OPER_REL_ADDR;
+		operand->op.abs_addr = *rel8;
 		goto exit;
 	}
 
@@ -333,4 +336,15 @@ exit:
 	}
 
 	return 0;
+}
+
+/**
+ * Resolves any OPER_REL_ADDR operands to their absolute address
+ */
+static void resolve_rel_addr(uint32_t base, operand_t* op)
+{
+	if (op->type == OPER_REL_ADDR) {
+		op->type = OPER_ABS_ADDR;
+		op->op.abs_addr += base;
+	}
 }
