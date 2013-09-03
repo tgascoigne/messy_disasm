@@ -297,14 +297,14 @@ int elf_get_symbol_section(elf_t* elf, int symidx, int* section)
 int elf_get_symbol_by_name(elf_t* elf, char* name, int* out)
 {
 	char sym_name[32];
-	int ret = 0;
 	for (int i = 0; i < elf->num_symbols; i++) {
 		elf_get_symbol_name(elf, i, sym_name); /* ignore errors */
 		if (strcmp(sym_name, name) == 0) {
 			*out = i;
+			return 0;
 		}
 	}
-	return 0;
+	return ELF_INVALID_SYMBOL;
 }
 
 /**

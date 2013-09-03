@@ -4,36 +4,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* these need reordering.. */
-#define OP_PUSH 1
-#define OP_MOV 2
-#define OP_AND 3
-#define OP_SUB 4
-#define OP_MOVL 5
-#define OP_CALL 6
-#define OP_LEAVE 7
-#define OP_RET 8
-#define OP_ADD 9
-#define OP_TEST 10
-#define OP_JZ 11
-#define OP_POP 12
-#define OP_MAX 0xFF
-
-static char mnemonics[OP_MAX][16] = {
-	[OP_PUSH] = "push",
-	[OP_MOV] = "mov",
-	[OP_AND] = "and",
-	[OP_SUB] = "sub",
-	[OP_MOVL] = "movl",
-	[OP_CALL] = "call",
-	[OP_LEAVE] = "leave",
-	[OP_RET] = "ret",
-	[OP_ADD] = "add",
-	[OP_TEST] = "test",
-	[OP_JZ] = "jz",
-	[OP_POP] = "pop"
-};
-
 #define OPER_NONE 0
 #define OPER_REG 1
 #define OPER_ADDR 2
@@ -107,21 +77,72 @@ static char reg_table[3][8][16] = {
 	{ "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" }
 };
 
+/* these need reordering.. */
+#define OP_PUSH 1
+#define OP_MOV 2
+#define OP_AND 3
+#define OP_SUB 4
+#define OP_MOVL 5
+#define OP_CALL 6
+#define OP_LEAVE 7
+#define OP_RET 8
+#define OP_ADD 9
+#define OP_TEST 10
+#define OP_JZ 11
+#define OP_POP 12
+#define OP_LEA 13
+#define OP_SHL 14
+#define OP_JMP 15
+#define OP_CMP 16
+#define OP_JLE 17
+#define OP_JNZ 18
+#define OP_MAX 0xFF
+
+static char mnemonics[OP_MAX][16] = {
+	[OP_PUSH] = "push",
+	[OP_MOV] = "mov",
+	[OP_AND] = "and",
+	[OP_SUB] = "sub",
+	[OP_MOVL] = "movl",
+	[OP_CALL] = "call",
+	[OP_LEAVE] = "leave",
+	[OP_RET] = "ret",
+	[OP_ADD] = "add",
+	[OP_TEST] = "test",
+	[OP_JZ] = "jz",
+	[OP_POP] = "pop",
+	[OP_LEA] = "lea",
+	[OP_SHL] = "shl",
+	[OP_JMP] = "jmp",
+	[OP_CMP] = "cmp",
+	[OP_JLE] = "jle",
+	[OP_JNZ] = "jnz"
+};
+
 static istr_def_t istr_table[] = {
+	{ .opcode = 0x1,  .operation = OP_ADD, .flags = FLAG_MODRM, .src_oper = OPER_REG, .dst_oper = OPER_RM },
+	{ .opcode = 0x29, .operation = OP_SUB, .flags = FLAG_MODRM, .src_oper = OPER_REG, .dst_oper = OPER_RM },
 	{ .opcode = 0x50, .operation = OP_PUSH, .flags = 0, .src_oper = OPER_REG, .dst_oper = OPER_NONE },
 	{ .opcode = 0x58, .operation = OP_POP, .flags = 0, .src_oper = OPER_REG, .dst_oper = OPER_NONE },
 	{ .opcode = 0x74, .operation = OP_JZ, .flags = 0, .src_oper = OPER_REL8_ADDR, .dst_oper = OPER_NONE },
+	{ .opcode = 0x75, .operation = OP_JNZ, .flags = 0, .src_oper = OPER_REL8_ADDR, .dst_oper = OPER_NONE },
+	{ .opcode = 0x7E, .operation = OP_JLE, .flags = 0, .src_oper = OPER_REL8_ADDR, .dst_oper = OPER_NONE },
+	{ .opcode = 0x81, .ex_opcode = 0x7, .operation = OP_CMP, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
 	{ .opcode = 0x81, .ex_opcode = 0x0, .operation = OP_ADD, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x0, .operation = OP_ADD, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x4, .operation = OP_AND, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0x83, .ex_opcode = 0x5, .operation = OP_SUB, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
+	{ .opcode = 0x83, .ex_opcode = 0x7, .operation = OP_CMP, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM8, .dst_oper = OPER_RM },
 	{ .opcode = 0x85, .operation = OP_TEST, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
-	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
+	{ .opcode = 0x89, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_REG, .dst_oper = OPER_RM },
 	{ .opcode = 0x8B, .operation = OP_MOV, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
+	{ .opcode = 0x8D, .operation = OP_LEA, .flags = FLAG_MODRM, .src_oper = OPER_RM, .dst_oper = OPER_REG },
 	{ .opcode = 0xB8, .operation = OP_MOV, .flags = 0, .src_oper = OPER_IMM, .dst_oper = OPER_REG },
+	{ .opcode = 0xD1, .ex_opcode = 0x4, .operation = OP_SHL, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_RM, .dst_oper = OPER_NONE },
 	{ .opcode = 0xC3, .operation = OP_RET, .flags = 0, .src_oper = OPER_NONE, .dst_oper = OPER_NONE },
 	{ .opcode = 0xC7, .ex_opcode = 0x0, .operation = OP_MOVL, .flags = FLAG_MODRM | FLAG_EXTD_OPCODE, .src_oper = OPER_IMM, .dst_oper = OPER_RM },
 	{ .opcode = 0xC9, .operation = OP_LEAVE, .flags = 0, .src_oper = OPER_NONE, .dst_oper = OPER_NONE },
+	{ .opcode = 0xEB, .operation = OP_JMP, .flags = 0, .src_oper = OPER_REL8_ADDR, .dst_oper = OPER_NONE },
 	{ .opcode = 0xE8, .operation = OP_CALL, .flags = 0, .src_oper = OPER_REL_ADDR, .dst_oper = OPER_NONE },
 	{ 0 }
 };
