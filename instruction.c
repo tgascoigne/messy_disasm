@@ -8,8 +8,8 @@
  */
 void istr_to_string(istr_t* istr, char* out)
 {
-	char src_oper[16];
-	char dst_oper[16];
+	char src_oper[64];
+	char dst_oper[64];
 	op_to_string(istr, &istr->src_oper, src_oper);
 	op_to_string(istr, &istr->dst_oper, dst_oper);
 
@@ -34,8 +34,8 @@ void op_to_string(istr_t* istr, operand_t* op, char* out)
 	reg_t reg_op = op->op.reg;
 	imm_t imm_op = op->op.imm;
 	addr_op_t* addr_op = &(op->op.addr);
-	abs_addr_t abs_addr_op = op->op.imm;
-	char tmp[16];
+	abs_addr_t abs_addr_op = op->op.abs_addr;
+	char tmp[64];
 	sprintf(out, "");
 	switch (op->type) {
 	case OPER_REG:
@@ -45,7 +45,12 @@ void op_to_string(istr_t* istr, operand_t* op, char* out)
 		sprintf(out, "$0x%x", imm_op);
 		break;
 	case OPER_ABS_ADDR:
-		sprintf(out, "%x", abs_addr_op);
+		if (strcmp(abs_addr_op.sym, "") != 0) {
+			sprintf(tmp, " <%s+%x>", abs_addr_op.sym, abs_addr_op.sym_ofs);
+		} else {
+			sprintf(tmp, "");
+		}
+		sprintf(out, "%x%s", abs_addr_op.addr, tmp);
 		break;
 	case OPER_ADDR:
 		/* append the displacement */

@@ -45,7 +45,7 @@ int disasm_func(elf_t* elf, char* func)
 	while (!done) {
 		/* decode the next instruction */
 		unsigned char* orig_ip = ip;
-		ret = istr_decode(&ip, virt_ip, &instruction);
+		ret = istr_decode(elf, &ip, virt_ip, &instruction);
 		if (ret != 0) {
 			printf("unable to decode instruction at %x\n", virt_ip);
 			return DISASM_DECODE_FAIL;

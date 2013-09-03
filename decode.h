@@ -6,6 +6,8 @@
 
 #include "instruction.h"
 
-int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out);
+typedef struct elf elf_t;
+
+int istr_decode(elf_t* elf, unsigned char** _addr, uint32_t ip, istr_t* out);
 
 #endif /* _DECODE_H_ */

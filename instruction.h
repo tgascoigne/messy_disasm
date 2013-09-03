@@ -25,7 +25,6 @@
 
 typedef int8_t reg_t;
 typedef uint32_t imm_t;
-typedef uint32_t abs_addr_t;
 
 typedef struct istr_def istr_def_t;
 typedef struct istr istr_t;
@@ -33,6 +32,7 @@ typedef struct operand operand_t;
 
 typedef struct imm_op imm_op_t;
 typedef struct addr_op addr_op_t;
+typedef struct abs_addr abs_addr_t;
 
 struct istr_def {
 	uint16_t opcode;
@@ -48,6 +48,12 @@ struct addr_op {
 	reg_t idx;
 	uint8_t scale;
 	int32_t disp;
+};
+
+struct abs_addr {
+	uint32_t addr;
+	char sym[32];
+	uint32_t sym_ofs;
 };
 
 struct operand {

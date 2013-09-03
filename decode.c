@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "read_elf.h"
+
 #define ISTR_NO_INSTRUCTION 1
 #define ISTR_NO_OPERAND 2
 
@@ -26,12 +28,12 @@
 static void istr_decode_prefix(unsigned char** _addr, istr_t* out);
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out);
 static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand);
-static void resolve_rel_addr(uint32_t base, operand_t* op);
+static void resolve_op_addr(elf_t* elf, uint32_t base, operand_t* op);
 
 /**
  * Decode an instruction located at addr with virtual address ip
  */
-int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
+int istr_decode(elf_t* elf, unsigned char** _addr, uint32_t ip, istr_t* out)
 {
 	int ret = 0;
 	unsigned char* addr = *_addr;
@@ -57,8 +59,8 @@ int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 	istr_decode_operand(addr, &istr_end, out, &out->dst_oper);
 
 	uint32_t rel_base = ip + (uint64_t)(istr_end - addr) + 1;
-	resolve_rel_addr(rel_base, &out->src_oper);
-	resolve_rel_addr(rel_base, &out->dst_oper);
+	resolve_op_addr(elf, rel_base, &out->src_oper);
+	resolve_op_addr(elf, rel_base, &out->dst_oper);
 
 	*_addr = istr_end;
 
@@ -312,12 +314,12 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 		if (istr->op_size == SZ_16) {
 			int16_t* rel16 = (int16_t*)addr;
 			addr += 2;
-			operand->op.abs_addr = *rel16;
+			operand->op.abs_addr.addr = *rel16;
 			goto exit;
 		} else if (istr->op_size == SZ_32) {
 			int32_t* rel32 = (int32_t*)addr;
 			addr += 4;
-			operand->op.abs_addr = *rel32;
+			operand->op.abs_addr.addr = *rel32;
 			goto exit;
 		}
 	}
@@ -326,7 +328,7 @@ static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, is
 		int8_t* rel8 = (int8_t*)addr;
 		addr += 1;
 		operand->type = OPER_REL_ADDR;
-		operand->op.abs_addr = *rel8;
+		operand->op.abs_addr.addr = *rel8;
 		goto exit;
 	}
 
@@ -339,12 +341,52 @@ exit:
 }
 
 /**
- * Resolves any OPER_REL_ADDR operands to their absolute address
+ * Resolves any OPER_REL_ADDR operands to their absolute address, and
+ * any absolute addresses to their symbols if possible
  */
-static void resolve_rel_addr(uint32_t base, operand_t* op)
+static void resolve_op_addr(elf_t* elf, uint32_t base, operand_t* op)
 {
+	/* resolve relative addresses */
 	if (op->type == OPER_REL_ADDR) {
 		op->type = OPER_ABS_ADDR;
-		op->op.abs_addr += base;
+		op->op.abs_addr.addr += base;
+	}
+
+	/* resolve symbols */
+	if (op->type == OPER_ABS_ADDR) {
+		int closest_sym = -1;
+		int32_t closest_sym_ofs = 0;
+		char tmp[32];
+		for (int i = 0; i < elf->num_symbols; i++) {
+			Elf32_Sym* sym = &elf->symtab[i];
+
+			/* discard higher addresses */
+			if (sym->st_value > op->op.abs_addr.addr) {
+				continue;
+			}
+
+			/* discard empty symbol names */
+			elf_get_symbol_name(elf, i, tmp);
+			if (strcmp(tmp, "") == 0) {
+				continue;
+			}
+
+			int64_t ofs = op->op.abs_addr.addr - sym->st_value;
+			if (closest_sym == -1 || ofs < closest_sym_ofs) {
+				closest_sym = i;
+				closest_sym_ofs = ofs;
+			}
+
+			if (sym->st_value == op->op.abs_addr.addr) {
+				closest_sym = i;
+				closest_sym_ofs = 0;
+				break;
+			}
+		}
+
+		if (closest_sym != -1) {
+			elf_get_symbol_name(elf, closest_sym, op->op.abs_addr.sym);
+			op->op.abs_addr.sym_ofs = closest_sym_ofs;
+		}
 	}
 }
