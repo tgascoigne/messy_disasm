@@ -6,9 +6,6 @@
 #define ISTR_NO_INSTRUCTION 1
 #define ISTR_NO_OPERAND 2
 
-#define OPERAND_SRC 0
-#define OPERAND_DST 1
-
 #define MODE_REG_INDIRECT 0
 #define MODE_DISP8 1
 #define MODE_DISP32 2
@@ -28,7 +25,7 @@
 
 static void istr_decode_prefix(unsigned char** _addr, istr_t* out);
 static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out);
-static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction);
+static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand);
 
 /**
  * Decode an instruction located at addr with virtual address ip
@@ -55,8 +52,8 @@ int istr_decode(unsigned char** _addr, uint32_t ip, istr_t* out)
 
 	istr_end = addr;
 
-	istr_decode_operand(addr, &istr_end, out, &out->src_oper, OPERAND_SRC);
-	istr_decode_operand(addr, &istr_end, out, &out->dst_oper, OPERAND_DST);
+	istr_decode_operand(addr, &istr_end, out, &out->src_oper);
+	istr_decode_operand(addr, &istr_end, out, &out->dst_oper);
 
 	*_addr = istr_end;
 
@@ -160,7 +157,7 @@ static int istr_decode_opcode(unsigned char** _addr, istr_t* istr_out)
 /**
  * Decode an instruction operand
  */
-static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand, uint8_t direction)
+static int istr_decode_operand(unsigned char* addr, unsigned char** istr_end, istr_t* istr, operand_t* operand)
 {
 	uint8_t modrm;
 	uint8_t sib;
